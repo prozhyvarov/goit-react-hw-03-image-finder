@@ -34,7 +34,7 @@ export const SearchButton = styled.button`
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 140px;
+  width: 60px;
   height: 40px;
   font-size: 16px;
   font-weight: 600;
@@ -50,10 +50,6 @@ export const SearchButton = styled.button`
   }
 `;
 
-export const SearchSpan = styled.span`
-  padding: 10px;
-`;
-
-export const SearchLogo = styled.img`
-  margin-right: 50px;
-`;
+// export const SearchSpan = styled.span`
+//   padding: 10px;
+// `;

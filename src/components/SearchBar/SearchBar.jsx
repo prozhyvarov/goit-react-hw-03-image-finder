@@ -5,7 +5,6 @@ import {
   SearchForm,
   SearchInput,
   SearchButton,
-  SearchSpan,
 } from './SearchBar.styled';
 
 class SearchBar extends Component {
@@ -31,7 +30,6 @@ class SearchBar extends Component {
         <SearchForm onSubmit={this.handleSubmit}>
           <SearchButton>
             <BsSearch />
-            <SearchSpan>Search</SearchSpan>
           </SearchButton>
           <SearchInput
             name="searchName"
