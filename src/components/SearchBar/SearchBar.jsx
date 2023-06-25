@@ -1,5 +1,6 @@
 import { Component } from 'react';
 import { BsSearch } from 'react-icons/bs';
+import Notiflix from 'notiflix';
 import PropTypes from 'prop-types';
 import {
   SearchForm,
@@ -20,6 +21,11 @@ class SearchBar extends Component {
   handleSubmit = event => {
     event.preventDefault(); 
     const searchQuery = event.target.elements.searchName.value.trim(); 
+    if (searchQuery === '') {
+      Notiflix.Notify.warning(
+        'The search bar cannot be empty. Please type any criteria in the search bar.'
+      );
+     }
     this.props.onSubmit(searchQuery);
     event.target.reset(); 
   };
