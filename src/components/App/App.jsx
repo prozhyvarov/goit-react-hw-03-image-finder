@@ -1,94 +1,107 @@
-import React, { Component } from 'react';
-import { nanoid } from 'nanoid';
-import ContactFrom from '../ContactForm/ContactForm';
-import ContactList from '../ContactList/ContactList';
-import { Container, Title, SubTitle, Wrapper } from './App.styled';
-import Filter from '../Filter/Filter';
-import Notiflix from 'notiflix';
+import { Component } from 'react';
+import * as API from '../../services/PixabayAPI';
+import SearchBar from '../SearchBar/SearchBar';
+import ImageGallery from '../ImageGallery/ImageGallery';
+import Loader from '../Loader/Loader';
+import Button from '../Button/Button';
+import { ToastContainer, toast, Slide } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 class App extends Component {
+  // Установка начального состояния
   state = {
-    contacts: [
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    filter: '',
+    searchName: '', // Хранит запрос для поиска
+    images: [], // Хранит загруженные изображения
+    currentPage: 1, // Хранит текущий номер страницы
+    error: null, // Хранит сообщение об ошибке
+    isLoading: false, // Индикатор загрузки изображений
+    totalPages: 0, // Хранит общее количество страниц
   };
 
-  componentDidMount() {
-    const contacts = localStorage.getItem('contacts');
-    const parsedContacts = JSON.parse(contacts);
-    if (parsedContacts) {
-      console.log(parsedContacts);
-      this.setState({ contacts: parsedContacts });
-    }
-  }
-
+  // Метод жизненного цикла: вызывается при обновлении компонента
   componentDidUpdate(_, prevState) {
-    if (this.state.contacts !== prevState.contacts) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
+    // Проверяем, изменился ли запрос или номер страницы
+    if (
+      prevState.searchName !== this.state.searchName ||
+      prevState.currentPage !== this.state.currentPage
+    ) {
+      this.addImages(); // Получаем и добавляем изображения в состояние
     }
   }
 
-  removeContact = contactId => {
-    this.setState(prevState => {
-      return {
-        contacts: prevState.contacts.filter(({ id }) => id !== contactId),
-      };
-    });
-  };
-
-  changeFilter = event => {
-    this.setState({ filter: event.target.value });
-  };
-
-  addContact = contact => {
-    const isInContacts = this.state.contacts.some(
-      ({ name }) => name.toLowerCase() === contact.name.toLowerCase()
-    );
-
-    if (isInContacts) {
-      Notiflix.Notify.warning(`${contact.name} is already in contacts`);
-      return;
-    }
+  // Метод для загрузки дополнительных изображений путем увеличения номера текущей страницы
+  loadMore = () => {
     this.setState(prevState => ({
-      contacts: [{ id: nanoid(), ...contact }, ...prevState.contacts],
+      currentPage: prevState.currentPage + 1,
     }));
   };
 
-  getVisibleContacts = () => {
-    const { filter, contacts } = this.state;
-    const normalizedFilter = filter.toLowerCase();
+  // Метод для обработки отправки формы поиска
+  handleSubmit = query => {
+    this.setState({
+      searchName: query, // Устанавливаем введенный запрос в состояние
+      images: [], // Очищаем массив с изображениями
+      currentPage: 1, // Сбрасываем номер текущей страницы на первую
+    });
+  };
 
-    return contacts.filter(contact =>
-      contact.name.toLowerCase().includes(normalizedFilter)
-    );
+  // Метод для получения и добавления изображений в состояние
+  addImages = async () => {
+    const { searchName, currentPage } = this.state;
+    try {
+      this.setState({ isLoading: true }); // Устанавливаем флаг загрузки
+
+      // Получаем данные с помощью API запроса к Pixabay
+      const data = await API.getImages(searchName, currentPage);
+
+      if (data.hits.length === 0) {
+        // Если изображения не найдены, выводим сообщение
+        return toast.info('Sorry image not found...', {
+          position: toast.POSITION.TOP_RIGHT,
+        });
+      }
+
+      // Нормализуем полученные изображения
+      const normalizedImages = API.normalizedImages(data.hits);
+
+      this.setState(state => ({
+        images: [...state.images, ...normalizedImages], // Добавляем новые изображения к существующим
+        isLoading: false, // Сбрасываем флаг загрузки
+        error: '', // Очищаем сообщение об ошибке
+        totalPages: Math.ceil(data.totalHits / 12), // Вычисляем общее количество страниц
+      }));
+    } catch (error) {
+      this.setState({ error: 'Something went wrong!' }); // Если произошла ошибка, выводим сообщение
+    } finally {
+      this.setState({ isLoading: false }); // В любом случае сбрасываем флаг загрузки
+    }
   };
 
   render() {
-    const visibleContacts = this.getVisibleContacts();
-    const { filter } = this.state;
+    const { images, isLoading, currentPage, totalPages } = this.state;
+
     return (
-      <Container>
-        <Title>Phonebook</Title>
-
-        <ContactFrom onSubmit={this.addContact} />
-
-        <SubTitle>Contacts</SubTitle>
-        {this.state.contacts.length > 0 ? (
-          <Filter value={filter} onChangeFilter={this.changeFilter} />
+      <div>
+        <ToastContainer transition={Slide} />
+        <SearchBar onSubmit={this.handleSubmit} />
+        {images.length > 0 ? (
+          <ImageGallery images={images} />
         ) : (
-          <Wrapper>Your phonebook is empty. Add first contact!</Wrapper>
+          <p
+            style={{
+              padding: 100,
+              textAlign: 'center',
+              fontSize: 30,
+            }}
+          >
+            Image gallery is empty... 📷
+          </p>
         )}
-        {this.state.contacts.length > 0 && (
-          <ContactList
-            contacts={visibleContacts}
-            onRemoveContact={this.removeContact}
-          />
+        {isLoading && <Loader />}
+        {images.length > 0 && totalPages !== currentPage && !isLoading && (
+          <Button onClick={this.loadMore} /> // Кнопка для загрузки дополнительных изображений
         )}
-      </Container>
+      </div>
     );
   }
 }
